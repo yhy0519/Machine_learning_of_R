@@ -1,0 +1,812 @@
+■ R 수업 복습
+
+ 1. R 을 배워야 하는 이유?
+   
+     작은 목표(꿈과 희망) ?   세계 데이터 분 대회인 케글의 상위권 도전
+					  상위 4% 안에 들어가야합니다.
+					  상금 (1억) 이 있는것도 있고 없는것도 있고
+					  쉬운것도 있고 어려운것도 있습니다.
+
+        순서 : 쉬운것 ---> 어려운것 ---> 상금 있는것
+
+          1. 이력서 : 케글의 무슨 competition 에서 상위 2% 입니다. (증명서 캡쳐)
+
+                   데이터를 계속 바라보고 전처리하고 파생변수 생성하고
+                   분석 모델도 바꿔보고 하면서 계속 시간을 투자해서 노력을 해야
+                   상위권에 갈 수 있습니다.
+
+          2. 빅데이터 기사 시험(4월 26일)
+          
+               목표:   데이터 분석가, 딥러닝 개발자
+
+ 2. R 기본 문법과 시각화
+ 
+
+
+■ 집합 연산자
+
+       오라클            vs              R
+
+   1. union all                        rbind
+   2. union                       rbind + unique
+   3. intersect                      intersect
+   4. minus                           setdiff
+
+
+문제107. 아래의 SQL 의 결과를 R 로 구현하시오 !
+
+SQL>
+select ename, sal, deptno
+   from emp
+   where deptno in (10, 20)
+union all
+select ename, sal, deptno
+   from emp
+   where deptno = 20;
+
+R>
+emp <- read.csv("c:\\data\\emp3.csv")
+
+rbind( emp[ emp$deptno %in% c(10,20), c("ename", "sal", "deptno") ], 
+         emp[ emp$deptno == 20, c("ename", "sal", "deptno")])
+
+설명 : rbind 는 두개의 결과를 위아래로 묶어서 출력하는 함수
+
+
+문제108. 아래의 SQL 을 R 로 구현하시오 !
+
+SQL>
+select job, sum(sal)
+   from emp
+   group by job
+union all
+select null as job, sum(sal)
+   from emp;
+
+R>
+rbind( aggregate( sal~job, emp, sum ), c( " ", sum(emp$sal) ) )
+
+
+문제109. 아래의 SQL의 결과를 R 로 구현하시오 !
+
+SQL>
+select ename, sal, deptno
+   from emp
+   where deptno in (10, 20)
+union
+select ename, sal, deptno
+   from emp
+   where deptno = 10;
+
+설명: SQL 의 union 의 경우는 두 SQL 의 결과를 위아래로 연결하면서 첫번째 컬럼인
+	ename 을 기준으로 데이터를 정렬을 하고 중복된 데이터를 제거합니다.
+
+  union all 과 union 의 차이점 ?  1. 중복된 데이터를 제거
+						 2. 데이터를 정렬합니다.
+						
+						
+R>
+x <- unique( rbind( emp[ emp$deptno %in% c(10,20), c("ename", "sal", "deptno") ],
+                        emp[ emp$deptno==10, c("ename", "sal", "deptno") ] ) )
+
+library(doBy)
+orderBy( ~ename, x )
+
+ 
+문제110. 아래의 SQL 의 결과를 R 로 구현하시오 !
+
+SQL>
+select ename, sal, deptno
+   from emp
+   where deptno in (10, 20)
+minus
+select ename, sal, deptno
+   from emp
+   where deptno = 10;
+
+R>
+setdiff( emp[ emp$deptno %in% c(10, 20), c("ename", "sal", "deptno") ],
+          emp[ emp$deptno==10, c("ename", "sal", "deptno") ] )
+
+결과:
+    ename  sal deptno
+1    KING 5000     10
+3   CLARK 2450     10
+4   JONES 2975     20
+10   FORD 3000     20
+11  SMITH  800     20
+12  SCOTT 3000     20
+13  ADAMS 1100     20
+14 MILLER 1300     10
+
+설명: R 에 내장되어있는 setdiff 함수를 사용하면 안되고 dplyr 패키지의 setdiff 를
+	이용해야 합니다.
+	
+install.packages("dplyr")
+library(dplyr)
+
+setdiff( emp[ emp$deptno %in% c(10, 20), c("ename", "sal", "deptno") ],
+          emp[ emp$deptno==10, c("ename", "sal", "deptno") ] )
+
+결과:
+  ename  sal deptno
+1 JONES 2975     20
+2  FORD 3000     20
+3 SMITH  800     20
+4 SCOTT 3000     20
+5 ADAMS 1100     20
+
+설명: union 처럼 minus 도 데이터를 정렬을 하므로 정렬된 결과로 출력하시오 !
+
+x <- setdiff( emp[ emp$deptno %in% c(10, 20), c("ename", "sal", "deptno") ],
+                emp[ emp$deptno==10, c("ename", "sal", "deptno") ] )
+
+library(doBy)
+orderBy( ~ename, x )
+
+결과:
+  ename  sal deptno
+5 ADAMS 1100     20
+2  FORD 3000     20
+1 JONES 2975     20
+4 SCOTT 3000     20
+3 SMITH  800     20
+
+
+문제111. 아래의 SQL 의 결과를 R 로 구현하시오 !
+
+SQL>
+select ename, sal, deptno
+   from emp
+   where deptno in (10, 20)
+intersect
+select ename, sal, deptno
+   from emp
+   where deptno = 10;
+
+R>
+x <- intersect( emp[ emp$deptno %in% c(10, 20), c("ename", "sal", "deptno") ],
+                   emp[ emp$deptno==10, c("ename", "sal", "deptno") ] )
+
+library(doBy)
+orderBy( ~ename, x )
+
+결과:
+   ename  sal deptno
+2  CLARK 2450     10
+1   KING 5000     10
+3 MILLER 1300     10
+
+
+
+■ SQL 의 서브쿼리를 R 로 구현하기
+
+** 오라클의 서브쿼리의 종류 3가지
+
+ 1. 단일행 서브쿼리
+ 2. 다중행 서브쿼리
+ 3. 다중 컬럼 서브쿼리
+
+
+문제112. JONES 의 월급보다 더 많은 월급을 받는 사원들의 이름과 월급을 출력하시오 !
+
+SQL>
+select ename, sal
+   from emp
+   where sal > ( select sal
+                        from emp
+                        where ename='JONES');
+
+R>
+jones_sal <- emp[ emp$ename=="JONES", c("sal") ]
+jones_sal
+emp[ emp$sal > jones_sal, c("ename", "sal") ]
+
+
+문제113. 아래의 SQL 을 R 로 구현하시오 !
+
+SQL>
+select ename, sal
+   from emp
+   where sal = ( select max(sal)
+                        from emp );
+
+R>
+emp[ emp$sal==max(emp$sal), c("ename", "sal") ]
+
+
+문제114. 전국에서 등록금이 가장 비싼 학교 이름과 등록금을 출력하시오 !
+
+univ <- read.csv("전국_대학별등록금통계_현황.csv")
+head(univ)
+univ_max <- max(univ$등록금)
+univ[ univ$등록금==univ_max, c("학교명", "등록금")]
+
+
+문제115. KING 에게 보고하는 사원들의 이름과 월급을 출력하시오 !
+
+SQL>
+select ename, sal
+   from emp
+   where mgr = (select empno
+                        from emp
+                        where ename='KING');
+
+R>
+king_empno <- emp[ emp$ename=='KING', "empno" ]
+emp[ emp$mgr==king_empno, c("ename", "sal") ]
+
+결과:
+   ename  sal
+NA  <NA>   NA           ← 이부분을 제거하려면 ? na.omit 을 사용
+2  BLAKE 2850
+3  CLARK 2450
+4  JONES 2975
+
+R>
+na.omit( emp[ emp$mgr==king_empno, c("ename", "sal") ] )
+
+결과:
+  ename  sal
+2 BLAKE 2850
+3 CLARK 2450
+4 JONES 2975
+
+
+문제116. 관리자인 사원들의 이름을 출력하시오 !
+
+SQL>
+select ename
+   from emp
+   where empno in (select mgr
+                             from emp);
+
+설명: 관리자번호(mgr) 가 사원번호인 사원들을 출력
+
+R>
+emp[ emp$empno %in% emp$mgr, "ename" ]
+
+결과:
+[1] "KING"  "BLAKE" "CLARK" "JONES" "FORD"  "SCOTT"
+
+library(data.table)
+data.table( 이름=emp[ emp$empno %in% emp$mgr, "ename" ] )
+
+결과:
+    이름
+1:  KING
+2: BLAKE
+3: CLARK
+4: JONES
+5:  FORD
+6: SCOTT
+
+
+문제117. 관리자가 아닌 사원들의 이름을 출력하시오 !
+
+SQL>
+select ename
+   from emp
+   where empno not in (select mgr
+                                  from emp
+                                  where mgr in not null);
+
+R>
+library(data.table)
+data.table( 이름=emp[ ! emp$empno %in% emp$mgr, "ename" ] )
+
+결과:
+     이름
+1: MARTIN
+2:  ALLEN
+3: TURNER
+4:  JAMES
+5:   WARD
+6:  SMITH
+7:  ADAMS
+8: MILLER
+
+
+문제118. 아파트에서 가장 많이 발생하는 범죄유형이 무엇인지 출력하시오 !
+		(crime_loc.csv 를 사용)
+		
+crime_loc <- read.csv("c:\\data\\crime_loc.csv")
+head(crime_loc)
+
+x <- crime_loc[ crime_loc$장소=="아파트", c("범죄", "건수") ]
+x[ x$건수==max(x$건수), ]
+
+결과:
+  범죄  건수
+1 절도 25389
+
+
+문제119. 지하철에서 가장 많이 발생하는 범죄유형이 무엇인지 출력하시오 !
+
+x <- crime_loc[ crime_loc$장소=="지하철", c("범죄", "건수") ]
+x[ x$건수==max(x$건수), ]
+
+결과:
+    범죄 건수
+176 강간 1339
+
+
+문제120. 지하철에서 발생하는 범죄유형과 건수를 출력하는데 건수가 높은것부터 출력하시오 !
+
+crime_loc <- read.csv("c:\\data\\crime_loc.csv")
+x <- crime_loc[ crime_loc$장소=="지하철", c("범죄", "건수") ]
+library(doBy)
+orderBy( ~-건수, x )
+
+
+문제121. 위의 결과에서 첫번째 행만 출력하시오 !
+
+crime_loc <- read.csv("c:\\data\\crime_loc.csv")
+x <- crime_loc[ crime_loc$장소=="지하철", c("범죄", "건수") ]
+library(doBy)
+x2 <- orderBy( ~-건수, x )
+x2[ 1, ]
+
+
+문제122. 문제120번 결과에서 첫번째 행부터 세번째 행까지 출력하시오 !
+
+crime_loc <- read.csv("c:\\data\\crime_loc.csv")
+x <- crime_loc[ crime_loc$장소=="지하철", c("범죄", "건수") ]
+library(doBy)
+x2 <- orderBy( ~-건수, x )
+x2[ c(1:3), ]
+
+
+문제123. 강력범죄가 가장 많이 발생하는 요일은 언제인가 ?
+		(crime_day.csv를 이용)
+
+crime_day <- read.csv("c:\\data\\crime_day.csv")
+crime_day[ crime_day$C_C=="강력범죄", ]
+
+설명: trimws 함수 ---> 양쪽 공백 제거하는 함수
+
+x <- crime_day[ trimws(crime_day$C_C)=="강력범죄", ]
+library(doBy)
+x2 <- orderBy( ~-CNT, x )
+x2[ 1, "DAY" ]
+
+[1] "SAT"
+
+
+문제124. (점심시간 문제)  살인기수가 많이 발생하는 요일을 1위부터 3위까지 출력하시오
+
+x <- crime_day[ trimws(crime_day$C_T)=="살인기수", ] 
+# crime_day중 C_T  컬럼에서 `살인기수' 에 해당하는 값들만 출력 
+# 자료양측에 있을 공백을 제거(trimws)
+
+library(doBy)     # doBy 패키지 사용
+x2 <- orderBy( ~-CNT, x )   # CNT(건수) 크기가 큰 순으로 정렬하여 x2에 담는다.
+x2[ c(1:3), "DAY" ]   # x2에 담은 값에서 1~3 행만, 그중에서 "DAY"에 해당하는 값만 출력한다.
+
+결과:
+[1] "MON" "WED" "TUE"
+
+
+■ R 에서 순위를 출력하는 방법 
+
+문법:  rank 함수 
+
+예제:  이름, 월급,  월급에 대한 순위를 출력하시오 !
+
+ data.table( 이름=emp$ename, 월급=emp$sal, 
+                순위= rank(-emp$sal, ties.method="min")  )
+
+설명: rank 에 마이너스(-)를 사용하면 월급이 높은것부터 출력됩니다.
+
+ties.method 옵션:    1. min : 오라클의 rank 와 같다
+			     2. first : 오라클의 rank 와 같은데 순위가 같은 데이터가 있으면
+					인덱스 순서가 먼저 나온 데이터를 높은 순위로 부여합니다.
+			     3. max : 2등이 두명이면 둘 다 3등으로 출력합니다.
+	
+x <- data.table( 이름=emp$ename, 월급=emp$sal,
+                    순위=rank(-emp$sal, ties.method="min") )
+
+library(doBy)
+orderBy( ~ 순위, x )
+
+결과:
+      이름 월급 순위
+ 1:   KING 5000    1
+ 2:   FORD 3000    2
+ 3:  SCOTT 3000    2
+ 4:  JONES 2975    4
+ 5:  BLAKE 2850    5
+ 6:  CLARK 2450    6
+ 7:  ALLEN 1600    7
+ 8: TURNER 1500    8
+ 9: MILLER 1300    9
+10: MARTIN 1250   10
+11:   WARD 1250   10
+12:  ADAMS 1100   12
+13:  JAMES  950   13
+14:  SMITH  800   14
+
+
+※ 오라클의 dense_rank 와 같은 함수는 무엇인가 ?
+
+SQL>
+select ename, sal, dense_rank() over (order by sal desc) 순위
+   from emp;
+
+R>
+library(dplyr)
+x <- data.table( 이름=emp$ename, 월급=emp$sal,,
+                    순위=dense_rank(-emp$sal) )
+
+library(doBy)
+orderBy( ~ 순위, x )
+
+결과:
+      이름 월급 순위
+ 1:   KING 5000    1
+ 2:   FORD 3000    2
+ 3:  SCOTT 3000    2
+ 4:  JONES 2975    3
+ 5:  BLAKE 2850    4
+ 6:  CLARK 2450    5
+ 7:  ALLEN 1600    6
+ 8: TURNER 1500    7
+ 9: MILLER 1300    8
+10: MARTIN 1250    9
+11:   WARD 1250    9
+12:  ADAMS 1100   10
+13:  JAMES  950   11
+14:  SMITH  800   12
+
+
+ 문제125. 월요일에 많이 발생하는 범죄, 건수, 순위를 출력하시오 ~~ (crime_day.csv)
+
+R>
+library(dplyr)
+library(doBy)
+crime_day <- read.csv("crime_day.csv")
+c_mon <- crime_day[ crime_day$DAY=="MON", ]
+x <- data.table( 범죄=c_mon$C_T, 건수=c_mon$CNT,
+                순위=dense_rank(-c_mon$CNT) )
+orderBy( ~ 순위, x )
+
+
+문제126. 여자들이 많이 걸리는 암과 그 건수와 순위를 출력하시오 !
+		( 암종이 모든암은 제외하는 조건을 주세요 ~)
+		( cancer2.csv 를 사용하세요 )
+
+cancer2 <- read.csv("cancer2.csv")
+head(cancer2)
+unique(cancer2$암종)
+unique(cancer2$성별)
+
+c <- cancer2[ cancer2$성별=='여자' & cancer2$암종!="모든암",]
+head(c)
+View(c)
+
+x <- data.table( 암종=c$암종, 환자수=c$환자수, 순위=dense_rank(-c$환자수) )
+x2 <- orderBy( ~순위, x)
+
+x3 <- unique(x2)
+View(x3)
+
+
+
+■ R 로 막대그래프 그리기
+
+ "머신러닝 수업때와 케글에 데이터 분석시 사용하기 편하도록 함수로 만들어서
+  그래프 그리는것을 자동화 시키기"
+
+
+문제127. emp 테이블의 월급으로 기본적인 막대 그래프를 그리시오 !
+
+답:
+barplot(emp$sal)
+
+
+문제128. 위의 그래프의 제목을 Salary Bar Chart 라고 이름을 붙이시오 !
+
+답:
+barplot(emp$sal, main="Salary Bar Chart")
+
+
+문제129. 막대 그래프 x 축에 사원 이름을 붙이시오 !
+
+답:
+barplot(emp$sal, main="Salary Bar Chart", names.arg=emp$ename)
+
+
+문제130. 막대 그래프의 x축과 y축의 이름을 각각 이름, 월급이라고 하시오 !
+
+답:
+barplot(emp$sal, main="Salary Bar Chart", names.arg=emp$ename,
+           xlab="이름", ylab="월급")
+
+
+문제131. 막대 그래프의 색깔을 Green Yellow 색으로 출력하시오 !
+
+답:
+barplot(emp$sal, main="Salary Bar Chart", names.arg=emp$ename,
+           xlab="이름", ylab="월급", col="Green Yellow", density=80)
+
+설명: 카페에 R 색상표 확인
+https://www.stat.auckland.ac.nz/~ihaka/courses/787/R-colours-a4.pdf
+
+
+막대 그래프에서 특정 막대만 색깔을 다르게 하는 방법
+https://stackoverflow.com/questions/22894102/change-color-of-only-one-bar-in-ggplot 
+
+
+문제132. 창업건수.csv 를 R 로 로드하고 치킨집의 창업건수를 막대그래프로 시각화 하시오
+		(데이터 게시판 50번)
+
+create_cnt <- read.csv("창업건수.csv", header=T)
+create_cnt
+View(create_cnt)
+
+barplot( create_cnt$치킨집, main="년도별 치킨집 창업건수",
+           names.arg=create_cnt$년도, col="Green Yellow", density=80, ylim=c(0,1600) )
+
+
+
+
+문제133. 치킨집의 폐업건수로 막대그래프를 그리시오
+		( x 축은 년도입니다.)
+		
+drop_cnt <- read.csv("폐업건수.csv", header=T)
+
+barplot( drop_cnt$치킨집, main="년도별 치킨집 폐업건수",
+           names.arg=drop_cnt$년도, col="Green Yellow", density=80, ylim=c(0, 4000) )
+
+
+
+
+
+문제134. 치킨집의 창업건수와 폐업건수를 같이 막대래프로 시각화 하시오 !
+
+create_cnt <- read.csv("창업건수.csv", header=T)
+drop_cnt <- read.csv("폐업건수.csv", header=T)
+x <- rbind(create_cnt$치킨집, drop_cnt$치킨집)
+x
+
+barplot( x, main="년도별 치킨집  창업과 폐업건수", 
+         names.arg=drop_cnt$년도, col=c("Green Yellow", "Hot pink"),
+                                      density=80, ylim=c(0, 4000), beside=T )
+
+
+
+
+
+
+문제135. 카페(커피음료) 가 얼마나 창업을 하고 얼마나 폐업을 하는지 막대그래프로
+		시각화 하시오 !
+
+create_cnt <- read.csv("창업건수.csv", header=T)
+drop_cnt <- read.csv("폐업건수.csv", header=T)
+x <- rbind(create_cnt$커피음료, drop_cnt$커피음료)
+x
+
+barplot( x, main="년도별 카페 창업과 폐업건수", 
+           names.arg=drop_cnt$년도, col=c("Green Yellow", "Hot pink"),
+            density=80, ylim=c(0, 4000), beside=T )
+
+
+
+
+문제136. 위의 막대그래프를 앞으로 편하게 그릴 수 있도록 함수로 만들어서 실행되게 하시오 !
+
+R 함수 생성 문법:
+
+함수명 <- function() {
+                                   함수코드
+                            }
+
+bar_auto <- function() {
+             create_cnt <- read.csv("창업건수.csv", header=T)
+             drop_cnt <- read.csv("폐업건수.csv", header=T)
+             x <- rbind(create_cnt$커피음료, drop_cnt$커피음료)
+
+            barplot( x, main="년도별 카페 창업과 폐업건수", 
+                  names.arg=drop_cnt$년도, col=c("Green Yellow", "Hot pink"),
+                   density=80, ylim=c(0, 4000), beside=T )
+                           
+                                }
+
+bar_auto()
+
+
+문제137. 창업건수.csv 를 로드해서 치킨집의 창업건수를 막대 그래프로 그리는 함수를
+		생성하시오 ~
+
+a_bar <- function() {
+             create_cnt <- read.csv("창업건수.csv", header=T)
+
+            barplot( create_cnt$치킨집, main="년도별 치킨집 폐업건수", 
+                  names.arg=create_cnt$년도, col="Green Yellow",
+                   density=80, ylim=c(0, 1500), beside=T )
+                         }
+a_bar()
+
+
+
+
+■ 원형 그래프 그리기
+
+
+문제138. 사원 테이블의 월급을 원형 그래프로 그리시오 !
+
+pie(emp$sal)
+
+
+
+
+
+
+문제139. 위의 그래프를 다시 그리는데 누구의 월급인지가 명시되게하시오 !
+
+pie(emp$sal, main="Salary Pie Chart", labels=emp$ename, col=rainbow(15))
+
+
+
+
+
+문제139. 위의 그래프의 월급에 비율을 붙여서 출력하시오 !
+
+sal_labels <- round( emp$sal / sum(emp$sal) * 100, 1 )
+sal_labels
+sal_labels2 <- paste( emp$ename, sal_labels, '%')
+sal_labels2
+pie(emp$sal, main="Salary Pie Chart", labels=sal_labels2, col=rainbow(15))
+
+
+
+
+
+■ R 에서 라인 그래프 그리기
+
+시간 순서에 따른 데이터의 변화를 볼때 유용한 그래프
+
+
+문제141. 아래의 데이터로 plot(점) 그래프를 그리시오 !
+
+cars <- c(1, 3, 6, 4, 9)
+cars
+plot(cars)
+
+
+
+문제142. 위의 그래프에 파란색 선을 그리시오 !
+
+cars <- c(1, 3, 6, 4, 9)
+plot(cars, type='o', col='blue')
+
+설명:  type='o' : 선을 그어라
+
+
+문제143. 차와 트럭의 판매된 갯수를 라인 그래프로 시각화 하시오 !
+
+cars <- c(1, 3, 6, 4, 9)
+trucks <- c(2, 5, 4, 5, 12)
+
+plot( cars, type='o', col='blue', ylim=c(0,12) )
+
+# 그래프의 창을 닫지 말고 바로 이어서 아래의 코드를 실행
+
+lines( trucks, type='o', pch=22, lty=2, col='red')
+
+설명: pch=21 : 동그라미, lty=1 : 직선
+        pch=22 : 네모,      lty=2 : 점선
+
+
+
+
+
+
+문제144. 가로축을 월, 화, 수, 목, 금 으로 변경하시오 !
+
+cars <- c(1, 3, 6, 4, 9)
+trucks <- c(2, 5, 4, 5, 12)
+plot( cars, type='o', col='blue', ylim=c(0,12), axes=FALSE, ann=FALSE )
+lines( trucks, type='o', pch=22, lty=2, col='red')
+
+설명: axes=FALSE : x 축과 y 축을 지워라
+        ann=FALSE : 축 이름을 지워라
+
+
+** 새로운 축을 생성하는 방법
+
+axis( 1, at=1:5, lab=c("mon", "tue", "wed", "thu", "fri") )
+      ↑
+      x축  
+
+axis(2)   # y축 생성
+
+cars <- c(1, 3, 6, 4, 9)
+trucks <- c(2, 5, 4, 5, 12)
+plot( cars, type='o', col='blue', ylim=c(0,12), axes=FALSE, ann=FALSE )
+lines( trucks, type='o', pch=22, lty=2, col='red')
+axis( 1, at=1:5, lab=c("mon", "tue", "wed", "thu", "fri") )
+axis(2)
+legend( 2, 10, c('car', 'truck'), col=c('blue','red'), cex=0.8, pch=21:22, lty=1:2 )
+
+설명: cex 는 글씨 크기, 레전드 안에 pch 21(동그라미), pch 22(네모),
+	lty 1(직선), lty 2(점선) 을 표시한다.
+
+
+
+문제145. 치킨집의 창업건수를 이용해서 라인 그래프를 그리시오 !
+		x축을 연도로 두고 y축을 창업건수로 두고 만드시오 !
+
+create_cnt <- read.csv("창업건수.csv", header=T)
+plot( create_cnt$치킨집, type='o', col='blue', axes=FALSE, ann=FALSE )
+axis( 1, at=1:10, lab=create_cnt$년도 )
+axis(2)
+legend( 8, max(create_cnt$치킨집), '창업', col='blue', cex=0.8, pch=21, lty=1 )
+
+
+
+
+문제146. 치킨집의 창업건수와 폐업건수를 같이 출력되게 하시오 !
+		(라인 그래프로 그리시오 !)
+
+create_cnt <- read.csv("창업건수.csv", header=T)
+drop_cnt <- read.csv("폐업건수.csv", header=T)
+
+plot( drop_cnt$치킨집, type='o', col='red', axes=FALSE, ann=FALSE, pch=22, lty=2 )
+lines( create_cnt$치킨집, type='o', col='blue', pch=21, lty=1 )
+
+axis( 1,  at=1:10,  lab= create_cnt$년도 )
+axis(2)
+legend( 8, max(drop_cnt$치킨집) , c('폐업','창업') , col= c('red','blue'), cex=0.8,
+           pch=22:21, lty=2:1  ) 
+
+
+
+
+
+문제147. (오늘의 마지막 문제) 막대 그래프, 원형 그래프, 라인 그래프 이렇게 3가지를 그렸는데
+		이 세가지 그래프를 쉽게 실행할 수 있도록 함수로 만드시오 ~
+
+auto_bar() : 창업/폐업 막대 그래프 실행
+auto_pie() : 사원 테이블의 월급 비율 원형 그래프 실행
+auto_line() : 창업/폐업 라인 그래프 실행
+
+
+auto_bar <- function() {
+  create_cnt <- read.csv("창업건수.csv", header=T)
+  drop_cnt <- read.csv("폐업건수.csv", header=T)
+  x <- rbind(create_cnt$커피음료, drop_cnt$커피음료)
+  barplot( x, main="년도별 카페 창업과 폐업건수", 
+           names.arg=drop_cnt$년도, col=c("Green Yellow", "Hot pink"),
+           density=80, ylim=c(0, 4000), beside=T )
+                       }
+
+auto_pie <- function() {
+  sal_labels <- round( emp$sal / sum(emp$sal) * 100, 1 )
+  sal_labels2 <- paste( emp$ename, sal_labels, '%')
+  pie(emp$sal, main="Salary Pie Chart", labels=sal_labels2, col=rainbow(15))
+                       }
+
+auto_line <- function() {
+  create_cnt <- read.csv("창업건수.csv", header=T)
+  drop_cnt <- read.csv("폐업건수.csv", header=T)
+  plot( drop_cnt$치킨집, type='o', col='red', axes=FALSE, ann=FALSE, pch=22, lty=2 )
+  lines( create_cnt$치킨집, type='o', col='blue', pch=21, lty=1 )
+  axis( 1,  at=1:10,  lab= create_cnt$년도 )
+  axis(2)
+  legend( 8, max(drop_cnt$치킨집) , c('폐업','창업') , col= c('red','blue'), cex=0.8,
+         pch=22:21, lty=2:1  ) 
+                        }
+
+
+auto_bar()
+
+
+
+auto_pie()
+
+
+
+auto_line()
+
+
