@@ -1,0 +1,2 @@
+niv <- readLines("NIV.txt")
+niv
